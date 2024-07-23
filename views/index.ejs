@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<base target="_top">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>AnimalKids</title>
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+	<style>
+		html, body {
+			height: 100%;
+			margin: 0;
+		}
+		.leaflet-container {
+			height:100%;
+			width: 100%;
+			max-width: 100%;
+			max-height: 100%;
+		}
+	</style>
+</head>
+<body>
+<div id='map'></div>
+<script>
+const socket = io('http://localhost:3000');
+  const cities = L.layerGroup();
+  const puntos =[]
+
+  function Geo (){
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(mostrarPosicion, mostrarError);
+                } else {
+                  alert ("La geolocalización no es soportada por este navegador.");
+                }
+                console.log("paso 1 minuto")
+          }
+        function mostrarPosicion(posicion) {
+          const latitud = posicion.coords.latitude;
+          const longitud = posicion.coords.longitude;
+           const completo = {"longitud":latitud,"latitud":longitud,"Popup":"punto 2"}; 
+           //Se envian datos a servidor
+           socket.emit('setCoordenadas', completo)
+        }
+        function mostrarError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    document.getElementById("coordenadas").innerHTML = "El usuario denegó la solicitud de geolocalización.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    document.getElementById("coordenadas").innerHTML = "La información de la ubicación no está disponible.";
+                    break;
+                case error.TIMEOUT:
+                    document.getElementById("coordenadas").innerHTML = "La solicitud para obtener la ubicación ha caducado.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    document.getElementById("coordenadas").innerHTML = "Se ha producido un error desconocido.";
+                    break;
+            }
+          }
+//Creacion del grupo
+//codenada incial
+/*Cordenadas de puntos*/
+  /*Creacion de Layergrup*/
+        socket.on("setCoordenadas", (dataBro) => {
+          //.emit("setCoordenadas", ata);
+              puntos.push(dataBro)
+              puntos.forEach( punt =>{
+              L.marker([punt.longitud,punt.latitud]).bindPopup(punt.Popup).addTo(cities);
+            })
+        });
+
+/* TileLayer inicial*/
+const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	maxZoom: 19,
+	attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+});
+/* vista inicial del mapa*/
+const map = L.map('map', {
+	center: [3.4717845000000005, -76.5017932857143],
+	zoom: 13,
+	layers: [osm, cities]
+});
+
+/*Control del mapa*/
+const osmHOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+	maxZoom: 19,
+	attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
+});
+const baseLayers = {
+	'Vista1': osm,
+	'Vista2': osmHOT
+};
+
+
+const overlays = {
+	'Niños': cities
+};
+const layerControl = L.control.layers(baseLayers, overlays).addTo(map);
+/*Fin control del mapa*/
+const crownHill = L.marker([39.75, -105.09]).bindPopup('This is Crown Hill Park.');
+const rubyHill = L.marker([39.68, -105.00]).bindPopup('This is Ruby Hill Park.');
+const parks = L.layerGroup([crownHill, rubyHill]);
+
+//layerControl.addBaseLayer(openTopoMap, 'OpenTopoMap');
+layerControl.addOverlay(parks, 'Mascotas');
+Geo()
+</script>
+
+
+
+</body>
+</html>
